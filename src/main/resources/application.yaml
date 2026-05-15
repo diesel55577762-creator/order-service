@@ -10,5 +10,9 @@ spring:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
   liquibase:
     enabled: true
+  services:
+    product-service:
+      url: http://localhost:8082
 
-
+    inventory-service:
+      url: http://localhost:8081
