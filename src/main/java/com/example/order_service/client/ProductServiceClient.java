@@ -8,10 +8,10 @@ import java.util.UUID;
 
 import java.util.UUID;
 
-@FeignClient(name = "product-service", url = "${services.product-service.url}")
+@FeignClient(name = "product-service", url = "${spring.services.product-service.url}")
 public interface ProductServiceClient {
 
 
-    @GetMapping("/{id}")
+    @GetMapping("/products/{id}")
     ProductDto getProduct(@PathVariable("id") UUID id);
 }
