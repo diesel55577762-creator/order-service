@@ -2,6 +2,9 @@ package com.example.order_service.service;
 
 import com.example.order_service.client.InventoryClient;
 import com.example.order_service.client.ProductServiceClient;
+import com.example.order_service.model.dto.OrderItemDto;
+import com.example.order_service.model.dto.ProductDto;
+import com.example.order_service.model.dto.ProductInfoRequest;
 import com.example.order_service.model.entity.Customer;
 import feign.FeignException;
 import jakarta.persistence.EntityNotFoundException;
@@ -24,40 +27,44 @@ import java.util.UUID;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@EnableFeignClients(basePackages = "com.example.order service.client")
 public class OrderService {
     private final OrderRepository orderRepository;
     private final OrderMapper orderMapper;
     private final ProductServiceClient productServiceClient;
     private final InventoryClient inventoryClient;
 
-    public void processOrder(UUID productId, UUID warehouseId, int quantity, Customer customer) {
-        ProductDto productDto = productServiceClient.getProduct(productId);
-        BigDecimal price = productDto.getPrice();
 
-        try {
-            inventoryClient.reserveProduct(productId, warehouseId, quantity);
-        } catch (FeignException e) {
-            throw new RuntimeException("Недостаточно товара на складе");
-        }
-        BigDecimal totalCost = price.multiply(BigDecimal.valueOf(quantity));
-        Order order = Order.builder()
-                .customer(customer)
-                .status(Status.NEW)
-                .totalAmount(totalCost)
-                .created_At(Instant.now())
+    public OrderDto create(OrderDto dto, UUID warehouseId){
+        List<UUID> items = dto.getOrderItems().stream()
+                .map(OrderItemDto::getOrderId)
+                .toList();
+        ProductInfoRequest productInfoRequest = ProductInfoRequest.builder()
+                .ids(items)
                 .build();
 
+        List<ProductDto> products = productServiceClient.getProductInfoRequest(productInfoRequest);
+
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        for (ProductDto product : products) {
+            totalAmount = totalAmount.add(product.getPrice());
+        }
+        for (OrderItemDto item : dto.getOrderItems()) {
+            try {
+                inventoryClient.reserveProduct(item.getProductId(), warehouseId, item.getQuantity());
+            } catch (FeignException e) {
+                throw new RuntimeException("Недостаточно товара на складе для продукта: " + item.getProductId());
+            }
+        }
+        Order order = Order.builder()
+                .status(Status.NEW)
+                .totalAmount(totalAmount)
+                .created_At(Instant.now())
+                .build();
         orderRepository.save(order);
 
 
-    }
-
-    public OrderDto create(OrderDto dto){
-        Order order = orderMapper.toEntity(dto);
-        order = orderRepository.save(order);
-        log.info("Заказ создан: id={}", order.getId());
         return orderMapper.toDto(order);
+
     }
 
     public OrderDto getOrder(UUID id){

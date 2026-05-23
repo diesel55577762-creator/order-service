@@ -1,17 +1,20 @@
 package com.example.order_service.client;
 
+import com.example.order_service.model.dto.ProductDto;
+import com.example.order_service.model.dto.ProductInfoRequest;
+import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import java.util.UUID;
+import org.springframework.web.bind.annotation.RequestBody;
 
-
+import java.util.List;
 import java.util.UUID;
 
 @FeignClient(name = "product-service", url = "${spring.services.product-service.url}")
 public interface ProductServiceClient {
 
-
-    @GetMapping("/products/{id}")
-    ProductDto getProduct(@PathVariable("id") UUID id);
+    @Operation(summary = "Получение списка продуктов по id товара")
+    @GetMapping("/by-ids")
+    List<ProductDto> getProductInfoRequest(@RequestBody ProductInfoRequest dto);
 }

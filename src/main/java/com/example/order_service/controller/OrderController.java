@@ -18,11 +18,12 @@ public class OrderController {
 
     private final OrderService orderService;
 
+
     @Operation(summary = "Создание сервиса заказов")
     @PostMapping
-    public OrderDto create(@RequestBody OrderDto dto) {
+    public OrderDto create(@RequestBody OrderDto dto, UUID warehouseId) {
         log.info("Отправлен запрос на создание сервиса заказов");
-        return orderService.create(dto);
+        return orderService.create(dto, warehouseId);
     }
 
     @Operation(summary = "получить заказ по id")
