@@ -21,9 +21,9 @@ public class OrderController {
 
     @Operation(summary = "Создание сервиса заказов")
     @PostMapping
-    public OrderDto create(@RequestBody OrderDto dto, UUID warehouseId) {
+    public OrderDto create(@RequestBody OrderDto dto) {
         log.info("Отправлен запрос на создание сервиса заказов");
-        return orderService.create(dto, warehouseId);
+        return orderService.create(dto);
     }
 
     @Operation(summary = "получить заказ по id")

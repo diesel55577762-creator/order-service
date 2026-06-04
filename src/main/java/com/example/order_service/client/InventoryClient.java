@@ -11,11 +11,9 @@ public interface InventoryClient {
 
     @PostMapping("/inventoryItems/reserve")
     void reserveProduct(@RequestParam UUID productId,
-                        @RequestParam UUID warehouseId,
                         @RequestParam Integer quantity);
 
     @PostMapping("/inventoryItems/release")
     void releaseProduct(@RequestParam UUID productId,
-                        @RequestParam UUID warehouseId,
                         @RequestParam Integer quantity);
 }

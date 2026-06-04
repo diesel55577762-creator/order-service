@@ -7,7 +7,12 @@ import com.example.order_service.model.dto.ProductDto;
 import com.example.order_service.model.dto.ProductInfoRequest;
 import com.example.order_service.model.entity.Customer;
 import feign.FeignException;
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
+import io.github.resilience4j.retry.annotation.Retry;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +24,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.stereotype.Service;
 import com.example.order_service.repository.OrderRepository;
 
+import javax.naming.ServiceUnavailableException;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -34,25 +40,41 @@ public class OrderService {
     private final InventoryClient inventoryClient;
 
 
-    public OrderDto create(OrderDto dto, UUID warehouseId){
-        List<UUID> items = dto.getOrderItems().stream()
-                .map(OrderItemDto::getOrderId)
+    public OrderDto createFallback(OrderDto dto, UUID warehouseId, Throwable ex) throws ServiceUnavailableException {
+        throw new ServiceUnavailableException("Сервис временно недоступен. Попробуйте позже");
+    }
+
+    @Retry(name = "orderCreateRetry", fallbackMethod = "createFallback")
+    @CircuitBreaker(name = "orderCreateCB", fallbackMethod = "createFallback")
+    @RateLimiter(name = "orderCreateRL")
+    @Bulkhead(name = "orderCreateBH")
+    public OrderDto create(OrderDto dto) {
+        List<UUID> items = dto.getOrderItems()
+                .stream()
+                .map(OrderItemDto::getProductId)
                 .toList();
         ProductInfoRequest productInfoRequest = ProductInfoRequest.builder()
                 .ids(items)
                 .build();
-
         List<ProductDto> products = productServiceClient.getProductInfoRequest(productInfoRequest);
-
-        BigDecimal totalAmount = BigDecimal.ZERO;
-        for (ProductDto product : products) {
-            totalAmount = totalAmount.add(product.getPrice());
-        }
         for (OrderItemDto item : dto.getOrderItems()) {
             try {
-                inventoryClient.reserveProduct(item.getProductId(), warehouseId, item.getQuantity());
+                inventoryClient.reserveProduct(item.getProductId(), item.getQuantity());
             } catch (FeignException e) {
-                throw new RuntimeException("Недостаточно товара на складе для продукта: " + item.getProductId());
+                throw new RuntimeException(
+                        "Недостаточно товара на складе для продукта: "
+                                + item.getProductId());
+            }
+        }
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        for (OrderItemDto item : dto.getOrderItems()) {
+            for (ProductDto product : products) {
+                if (product.getId().equals(item.getProductId())) {
+                    totalAmount = totalAmount.add(
+                            product.getPrice()
+                                    .multiply(BigDecimal.valueOf(item.getQuantity()))
+                    );
+                }
             }
         }
         Order order = Order.builder()
@@ -61,10 +83,7 @@ public class OrderService {
                 .created_At(Instant.now())
                 .build();
         orderRepository.save(order);
-
-
         return orderMapper.toDto(order);
-
     }
 
     public OrderDto getOrder(UUID id){

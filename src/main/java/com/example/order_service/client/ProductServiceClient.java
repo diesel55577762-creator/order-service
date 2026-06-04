@@ -11,10 +11,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import java.util.List;
 import java.util.UUID;
 
-@FeignClient(name = "product-service", url = "${spring.services.product-service.url}")
+@FeignClient(name = "product-service", url = "${services.product-service.url}")
 public interface ProductServiceClient {
 
     @Operation(summary = "Получение списка продуктов по id товара")
-    @GetMapping("/by-ids")
+    @GetMapping("/products/by-ids")
     List<ProductDto> getProductInfoRequest(@RequestBody ProductInfoRequest dto);
 }
