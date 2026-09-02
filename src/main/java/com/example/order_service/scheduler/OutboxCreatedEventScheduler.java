@@ -1,6 +1,7 @@
 package com.example.order_service.scheduler;
 
 import com.example.order_service.kafka.producer.KafkaProducer;
+import com.example.order_service.model.enums.EventType;
 import com.example.order_service.model.enums.OutboxStatus;
 import com.example.order_service.model.entity.OutboxEntity;
 import com.example.order_service.repository.OutboxEventRepository;
@@ -32,7 +33,8 @@ public class OutboxCreatedEventScheduler {
 
         for (OutboxEntity event : pendingEvents) {
             try {
-                kafkaProducer.sendEvent("order-events", event.getAggregateId().toString(), event.getPayload());
+                String topic = getTopicByEventType(event.getEventType());
+                kafkaProducer.sendEvent(topic, event.getAggregateId().toString(), event.getPayload());
                 event.setStatus(OutboxStatus.SENT);
                 outboxEventRepository.save(event);
                 log.info("Событие {} отправлено в Kafka", event.getId());
@@ -42,6 +44,14 @@ public class OutboxCreatedEventScheduler {
                 outboxEventRepository.save(event);
             }
         }
+    }
+    private String getTopicByEventType(EventType eventType) {
+        return switch (eventType) {
+            case ORDER_CREATED -> "created_order_event";
+            case ORDER_CONFIRMED -> "order_confirmed";
+            case ORDER_CANCELLED -> "order_cancelled";
+            default -> throw new IllegalArgumentException("Unknown event type: " + eventType);
+        };
     }
 }
 

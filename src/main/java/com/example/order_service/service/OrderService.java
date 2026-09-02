@@ -22,6 +22,7 @@ import com.example.order_service.model.entity.Order;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import com.example.order_service.repository.OrderRepository;
+import tools.jackson.databind.ObjectMapper;
 
 import javax.naming.ServiceUnavailableException;
 import java.math.BigDecimal;
@@ -41,6 +42,7 @@ public class OrderService {
     private final KafkaProducer kafkaProducer;
     private final CustomerRepository customerRepository;
     private final OutboxEventRepository outboxEventRepository;
+    private final ObjectMapper objectMapper;
 
 
 
@@ -61,20 +63,7 @@ public class OrderService {
                 .ids(items)
                 .build();
         List<ProductDto> products = productServiceClient.getProductInfoRequest(productInfoRequest);
-        for (OrderItemDto item : dto.getOrderItems()) {
-            StatusReservedItem status = inventoryClient.reserveProduct(
-                    item.getProductId(),
-                    item.getQuantity()
-            );
 
-            if (status != StatusReservedItem.SUCCESS) {
-                log.error("Резервация не удалась для продукта: {}, статус: {}",
-                        item.getProductId(), status);
-                throw new RuntimeException(
-                        "Недостаточно товара на складе для продукта: " + item.getProductId()
-                );
-            }
-        }
         BigDecimal totalAmount = BigDecimal.ZERO;
         for (OrderItemDto item : dto.getOrderItems()) {
             for (ProductDto product : products) {
@@ -95,19 +84,18 @@ public class OrderService {
                 .created_At(Instant.now())
                 .build();
         Order saved = orderRepository.save(order);
+        OrderCreatedEvent orderCreatedEvent = new OrderCreatedEvent(saved.getId(), dto.getOrderItems());
 
         OutboxEntity outbox = OutboxEntity.builder()
                 .id(UUID.randomUUID())
                 .aggregateId(saved.getId())
                 .aggregateType(AggregateType.ORDER)
                 .eventType(EventType.ORDER_CREATED)
+                .payload(objectMapper.writeValueAsString(orderCreatedEvent))  // ← ДОБАВИЛИ!
                 .status(OutboxStatus.NEW)
                 .createdAt(Instant.now())
                 .build();
         outboxEventRepository.save(outbox);
-
-        OrderCreatedEvent orderCreatedEvent = new OrderCreatedEvent(saved.getId(), dto.getOrderItems());
-        kafkaProducer.sendEvent("created_order_event", order.getId().toString(), orderCreatedEvent);
 
         return orderMapper.toDto(order);
 
