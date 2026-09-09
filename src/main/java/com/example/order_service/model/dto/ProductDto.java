@@ -1,6 +1,6 @@
 package com.example.order_service.model.dto;
 
-import com.example.order_service.model.entity.ProductStatus;
+import com.example.order_service.model.enums.ProductStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;

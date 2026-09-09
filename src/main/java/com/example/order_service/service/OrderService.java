@@ -2,27 +2,27 @@ package com.example.order_service.service;
 
 import com.example.order_service.client.InventoryClient;
 import com.example.order_service.client.ProductServiceClient;
-import com.example.order_service.model.dto.OrderItemDto;
-import com.example.order_service.model.dto.ProductDto;
-import com.example.order_service.model.dto.ProductInfoRequest;
+import com.example.order_service.kafka.producer.KafkaProducer;
+import com.example.order_service.model.dto.*;
 import com.example.order_service.model.entity.Customer;
-import feign.FeignException;
+import com.example.order_service.model.entity.OutboxEntity;
+import com.example.order_service.model.enums.*;
+import com.example.order_service.repository.CustomerRepository;
+import com.example.order_service.repository.OutboxEventRepository;
 import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.github.resilience4j.retry.annotation.Retry;
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import com.example.order_service.mapper.OrderMapper;
-import com.example.order_service.model.dto.OrderDto;
 import com.example.order_service.model.entity.Order;
-import com.example.order_service.model.entity.Status;
-import org.springframework.cloud.openfeign.EnableFeignClients;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import com.example.order_service.repository.OrderRepository;
+import tools.jackson.databind.ObjectMapper;
 
 import javax.naming.ServiceUnavailableException;
 import java.math.BigDecimal;
@@ -38,9 +38,15 @@ public class OrderService {
     private final OrderMapper orderMapper;
     private final ProductServiceClient productServiceClient;
     private final InventoryClient inventoryClient;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final KafkaProducer kafkaProducer;
+    private final CustomerRepository customerRepository;
+    private final OutboxEventRepository outboxEventRepository;
+    private final ObjectMapper objectMapper;
 
 
-    public OrderDto createFallback(OrderDto dto, UUID warehouseId, Throwable ex) throws ServiceUnavailableException {
+
+    public OrderDto createFallback(OrderDto dto, Throwable ex) throws ServiceUnavailableException {
         throw new ServiceUnavailableException("Сервис временно недоступен. Попробуйте позже");
     }
 
@@ -57,15 +63,7 @@ public class OrderService {
                 .ids(items)
                 .build();
         List<ProductDto> products = productServiceClient.getProductInfoRequest(productInfoRequest);
-        for (OrderItemDto item : dto.getOrderItems()) {
-            try {
-                inventoryClient.reserveProduct(item.getProductId(), item.getQuantity());
-            } catch (FeignException e) {
-                throw new RuntimeException(
-                        "Недостаточно товара на складе для продукта: "
-                                + item.getProductId());
-            }
-        }
+
         BigDecimal totalAmount = BigDecimal.ZERO;
         for (OrderItemDto item : dto.getOrderItems()) {
             for (ProductDto product : products) {
@@ -77,13 +75,31 @@ public class OrderService {
                 }
             }
         }
+        Customer customer = customerRepository.findById(dto.getCustomerId())
+                .orElseThrow(() -> new EntityNotFoundException("Клиент не найден"));
         Order order = Order.builder()
+                .customer(customer)
                 .status(Status.NEW)
                 .totalAmount(totalAmount)
                 .created_At(Instant.now())
                 .build();
-        orderRepository.save(order);
+        Order saved = orderRepository.save(order);
+        OrderCreatedEvent orderCreatedEvent = new OrderCreatedEvent(saved.getId(), dto.getOrderItems());
+
+        OutboxEntity outbox = OutboxEntity.builder()
+                .id(UUID.randomUUID())
+                .aggregateId(saved.getId())
+                .aggregateType(AggregateType.ORDER)
+                .eventType(EventType.ORDER_CREATED)
+                .payload(objectMapper.writeValueAsString(orderCreatedEvent))  // ← ДОБАВИЛИ!
+                .status(OutboxStatus.NEW)
+                .createdAt(Instant.now())
+                .build();
+        outboxEventRepository.save(outbox);
+
         return orderMapper.toDto(order);
+
+
     }
 
     public OrderDto getOrder(UUID id){
@@ -102,10 +118,23 @@ public class OrderService {
     @Transactional
     public void confirm(UUID id) {
         Order order = orderRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Заказ не найден"));
+                .orElseThrow(() -> new EntityNotFoundException("Заказ не найден"));
 
         order.setStatus(Status.CONFIRMED);
         orderRepository.save(order);
+
+        OrderConfirmedEvent event = new OrderConfirmedEvent(order.getId());
+        OutboxEntity outbox = OutboxEntity.builder()
+                .id(UUID.randomUUID())
+                .aggregateId(order.getId())
+                .aggregateType(AggregateType.ORDER)
+                .eventType(EventType.ORDER_CONFIRMED)
+                .status(OutboxStatus.NEW)
+                .build();
+        outboxEventRepository.save(outbox);
+
+        log.info("Заказ подтверждён, событие сохранено в outbox: {}", id);
+
     }
 
     @Transactional
@@ -115,5 +144,18 @@ public class OrderService {
 
         order.setStatus(Status.CANCELLED);
         orderRepository.save(order);
+        OrderCancelledEvent event = new OrderCancelledEvent(order.getId());
+
+        OutboxEntity outbox = OutboxEntity.builder()
+                .id(UUID.randomUUID())
+                .aggregateId(order.getId())
+                .aggregateType(AggregateType.ORDER)
+                .eventType(EventType.ORDER_CANCELLED)
+                .status(OutboxStatus.NEW)
+                .createdAt(Instant.now())
+                .build();
+        outboxEventRepository.save(outbox);
+
+        log.info("Заказ отменён, событие сохранено в outbox: {}", id);
     }
 }
