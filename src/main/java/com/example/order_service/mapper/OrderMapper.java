@@ -16,13 +16,13 @@ public interface OrderMapper {
     OrderDto toDto(Order order);
 
     @Mapping(source = "customerId", target = "customer")
+    @Mapping(source = "createdAt", target = "created_At")
     Order toEntity(OrderDto orderDto);
 
     default Customer map(UUID customerId) {
         if (customerId == null) {
             return null;
         }
-
         Customer customer = new Customer();
         customer.setId(customerId);
         return customer;
