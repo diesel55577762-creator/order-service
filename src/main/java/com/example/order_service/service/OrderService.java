@@ -80,6 +80,7 @@ public class OrderService {
         Order order = Order.builder()
                 .customer(customer)
                 .status(Status.NEW)
+                .id(dto.getId())
                 .totalAmount(totalAmount)
                 .created_At(Instant.now())
                 .build();
