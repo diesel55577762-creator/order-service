@@ -15,7 +15,7 @@ public class CustomerController {
 
     private final CustomerService customerService;
 
-    @Operation(summary ="Запрос на создание Сервиса")
+    @Operation(summary ="Запрос на создание Клиента")
     @PostMapping
     public CustomerDto create(@RequestBody CustomerDto dto) {
         return customerService.create(dto);
