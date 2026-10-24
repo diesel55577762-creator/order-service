@@ -7,7 +7,9 @@ spring:
   jpa:
     hibernate:
       ddl-auto: none
+
     database-platform: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: true
   liquibase:
     enabled: true
   resilience4j:
@@ -35,9 +37,15 @@ spring:
       instances:
         orderCreateBH:
           max-concurrent-calls: 5
+  kafka:
+    bootstrap-servers: localhost:9092
+    properties:
+      request.timeout.ms: 30000
+      metadata.max.age.ms: 300000
+
 services:
   product-service:
-    url: http://localhost:8082
+    url: http://localhost:8092
 
   inventory-service:
-    url: http://localhost:8081
+    url: http://localhost:8088

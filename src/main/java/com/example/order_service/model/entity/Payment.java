@@ -1,5 +1,6 @@
 package com.example.order_service.model.entity;
 
+import com.example.order_service.model.enums.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.*;
 

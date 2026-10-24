@@ -1,0 +1,20 @@
+[33m767461d[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mintegrationTest[m[33m, [m[1;32mdev[m[33m)[m HEAD@{0}: checkout: moving from Saga to integrationTest
+[33ma30486a[m[33m ([m[1;31morigin/Saga[m[33m, [m[1;32mSaga[m[33m)[m HEAD@{1}: checkout: moving from integrationTest to Saga
+[33m767461d[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mintegrationTest[m[33m, [m[1;32mdev[m[33m)[m HEAD@{2}: checkout: moving from Saga to integrationTest
+[33ma30486a[m[33m ([m[1;31morigin/Saga[m[33m, [m[1;32mSaga[m[33m)[m HEAD@{3}: checkout: moving from integrationTest to Saga
+[33m767461d[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mintegrationTest[m[33m, [m[1;32mdev[m[33m)[m HEAD@{4}: checkout: moving from dev to integrationTest
+[33m767461d[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mintegrationTest[m[33m, [m[1;32mdev[m[33m)[m HEAD@{5}: commit: Интеграционные тесты
+[33mfad789e[m HEAD@{6}: commit: Интеграционные тесты
+[33m91f5b87[m[33m ([m[1;31morigin/dev[m[33m, [m[1;32mkafka[m[33m)[m HEAD@{7}: checkout: moving from Saga to dev
+[33ma30486a[m[33m ([m[1;31morigin/Saga[m[33m, [m[1;32mSaga[m[33m)[m HEAD@{8}: commit: Saga настроена
+[33m2e2ac15[m HEAD@{9}: checkout: moving from 91f5183352059c789410b8fb48958e2072943d16 to Saga
+[33m91f5183[m HEAD@{10}: checkout: moving from dev to 91f5183352059c789410b8fb48958e2072943d16
+[33m91f5b87[m[33m ([m[1;31morigin/dev[m[33m, [m[1;32mkafka[m[33m)[m HEAD@{11}: checkout: moving from Saga to dev
+[33m2e2ac15[m HEAD@{12}: commit: Создан слушатель для Saga
+[33m91f5183[m HEAD@{13}: commit: Патерн SAGA
+[33m91f5b87[m[33m ([m[1;31morigin/dev[m[33m, [m[1;32mkafka[m[33m)[m HEAD@{14}: checkout: moving from kafka to Saga
+[33m91f5b87[m[33m ([m[1;31morigin/dev[m[33m, [m[1;32mkafka[m[33m)[m HEAD@{15}: checkout: moving from dev to kafka
+[33m91f5b87[m[33m ([m[1;31morigin/dev[m[33m, [m[1;32mkafka[m[33m)[m HEAD@{16}: merge origin/dev: Fast-forward
+[33m576c588[m[33m ([m[1;32mmaster[m[33m)[m HEAD@{17}: checkout: moving from feign to dev
+[33m2257915[m[33m ([m[1;31morigin/feign[m[33m, [m[1;32mfeign[m[33m)[m HEAD@{18}: commit: взаимодействие микросервисов создание клиента для 2 микросервисов
+[33m73d711f[m HEAD@{19}: commit: Добавление логики в создание заказа

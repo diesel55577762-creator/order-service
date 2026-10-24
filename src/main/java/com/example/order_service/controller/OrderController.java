@@ -19,10 +19,10 @@ public class OrderController {
     private final OrderService orderService;
 
 
-    @Operation(summary = "Создание сервиса заказов")
+    @Operation(summary = "Создание заказа")
     @PostMapping
     public OrderDto create(@RequestBody OrderDto dto) {
-        log.info("Отправлен запрос на создание сервиса заказов");
+        log.info("Отправлен запрос на создание заказа {}" ,dto);
         return orderService.create(dto);
     }
 
@@ -43,7 +43,7 @@ public class OrderController {
     @Operation(summary = "Запрос на подтверждение заказа")
     @PostMapping("/{id}/confirm")
     public void confirm(@PathVariable UUID id) {
-        log.info("отправлен запрос на на подтверждение заказа");
+        log.info("отправлен запрос на подтверждение заказа id: {}" ,id);
         orderService.confirm(id);
     }
 
