@@ -2,10 +2,11 @@ name: CI/CD for Order Service
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches:
+      - '*'
   pull_request:
-    branches: [ "main", "master" ]
-
+    branches:
+      - '*'
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
